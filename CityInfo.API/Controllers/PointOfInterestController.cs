@@ -1,6 +1,8 @@
 ﻿using CityInfo.API.Models;
+using CityInfo.API.Services;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,17 +13,36 @@ namespace CityInfo.API.Controllers
     [Route("api/cities/")]
     public class PointOfInterestController: Controller
     {
+        private ILogger<PointOfInterestController> _logger;
+        private IMailService _mailService;
+        public PointOfInterestController(ILogger<PointOfInterestController> logger,
+                                         IMailService mailService)
+        {
+            _logger = logger;
+            _mailService = mailService;
+        }
+
         [HttpGet("{cityId}/pointsofinterest")]
         public IActionResult GetPointsOfInterest(int cityId)
         {
-            var city = CitiesDataStore.Current.Cities.FirstOrDefault(c => c.Id == cityId);
-
-            if(city == null)
+            
+            try
             {
-                return NotFound();
-            }
+                var city = CitiesDataStore.Current.Cities.FirstOrDefault(c => c.Id == cityId);
 
-            return Ok(city.PointsOfInterest);
+                if (city == null)
+                {
+                    _logger.LogInformation($"City with id {cityId} has not been found.");
+                    return NotFound();
+                }
+
+                return Ok(city.PointsOfInterest);
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical($"Exception while getting PointsOfInterest with cityID {cityId}");
+                return StatusCode(500, $"A Problem happen while processing the request. Please try again.");
+            }
         }
 
         [HttpGet("{cityId}/pointofinterest/{id}", Name = "getPointOfInterest")]
@@ -181,6 +202,8 @@ namespace CityInfo.API.Controllers
             }
 
             city.PointsOfInterest.Remove(pointOfInterest);
+
+            _mailService.Send($"Point of Sale Deleted", $"Point of Sale Deleted in {cityId}");
 
             return NoContent();
         }
