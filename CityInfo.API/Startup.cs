@@ -22,7 +22,10 @@ namespace CityInfo.API
         {
             var builder = new ConfigurationBuilder()
                            .SetBasePath(env.ContentRootPath)
-                           .AddJsonFile("appSettings.json",optional:false,reloadOnChange:true);
+                           .AddJsonFile("appSettings.json",optional:false,reloadOnChange:true)
+                           .AddJsonFile($"appSettings.{env.EnvironmentName}",optional:true,reloadOnChange:true);
+
+            Configuration = builder.Build();
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.
