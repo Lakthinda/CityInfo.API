@@ -36,15 +36,49 @@ namespace CityInfo.API.Controllers
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetCity(int id)
+        public IActionResult GetCity(int id, bool includePointOfInterest = false)
         {
-            var city = CitiesDataStore.Current.Cities.FirstOrDefault(c => c.Id == id);
+            var city = _repository.GetCity(id, includePointOfInterest);
+
             if(city == null)
             {
                 return NotFound();
             }
 
-            return Ok(city);
+            if (includePointOfInterest)
+            {
+                var pointOfInterests = new List<PointOfInterestDto>();
+                foreach(var p in city.PointsOfInterest)
+                {
+                    pointOfInterests.Add(new PointOfInterestDto()
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Description = p.Description
+                    });
+                }
+
+                var cityDto = new CityDto()
+                {
+                    Id = city.Id,
+                    Name = city.Name,
+                    Description = city.Description,
+                    NumberOfPointsOfInterest = city.PointsOfInterest.Count,
+                    PointsOfInterest = pointOfInterests
+                };
+
+                return Ok(cityDto);
+            }
+
+            // default
+            var cityWithoutPointOfIntrestDto = new CityWithoutPointOfInterestDto()
+            {
+                Id = city.Id,
+                Name = city.Name,
+                Description = city.Description
+            };
+
+            return Ok(cityWithoutPointOfIntrestDto);
         }
     }
 }

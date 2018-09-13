@@ -21,10 +21,10 @@ namespace CityInfo.API.Services
 
         public City GetCity(int cityId, bool includePointOfInterest)
         {
-            if (!includePointOfInterest)
+            if (includePointOfInterest)
             {
                 //return _context.Cities.Include(p => p.PointsOfInterest).FirstOrDefault(c => c.Id == cityId);
-                return _context.Cities.Include(p => p.PointsOfInterest).Where(c => c.Id == cityId).FirstOrDefault(); 
+                return _context.Cities.Include(p => p.PointsOfInterest).Where(c => c.Id == cityId).FirstOrDefault();
             }
             //return _context.Cities.FirstOrDefault(c => c.Id == cityId);
             return _context.Cities.Where(c => c.Id == cityId).FirstOrDefault();
