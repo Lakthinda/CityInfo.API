@@ -79,34 +79,33 @@ namespace CityInfo.API.Controllers
             {
                 return BadRequest(ModelState);
             }
-
-            var city = CitiesDataStore.Current.Cities.FirstOrDefault(c => c.Id == cityId);
-
-            if (city == null)
+            
+            if (!_repository.CityExists(cityId))
             {
                 return NotFound();
             }
 
-            if(city.PointsOfInterest.FirstOrDefault(p => p.Name.Contains(pointOfInterest.Name)) != null)
+            var pointsOfInterest = _repository.GetPointsOfInterest(cityId);
+                        
+            if(pointsOfInterest.FirstOrDefault(p => p.Name.Contains(pointOfInterest.Name)) != null)
             {
                 return BadRequest(new { ErrorMessage = "This point of interest already exists." });
             }
 
-            // TO DO - Improve later
-            var maxPointOfInterestId = city.PointsOfInterest.Max(p => p.Id);
+            var finalPointOfInterest = Mapper.Map<Entities.PointOfInterest>(pointOfInterest);
+            _repository.AddPointOfInterestForCity(cityId, finalPointOfInterest);
 
-            var finalPointOfInterest = new PointOfInterestDto()
+            if (!_repository.Save())
             {
-                Id = ++maxPointOfInterestId,
-                Name = pointOfInterest.Name,
-                Description = pointOfInterest.Description
-            };
+                _logger.LogCritical($"Error when saving new point of Interest for CityID {cityId}, PointOfInterest {finalPointOfInterest.Id},{finalPointOfInterest.Name}");
+                return StatusCode(500, "A problem happen when creating the point of interest. Please try again");
+            }
 
-            city.PointsOfInterest.Add(finalPointOfInterest);
+            var createdPointOfInterest = Mapper.Map<PointOfInterestDto>(finalPointOfInterest);
 
             return CreatedAtRoute("getPointOfInterest",
-                                  new { cityId = cityId, id = finalPointOfInterest },
-                                  finalPointOfInterest);
+                                  new { cityId = cityId, id = createdPointOfInterest.Id },
+                                  createdPointOfInterest);
         }
 
         [HttpPut("{cityId}/pointofinterest/{id}")]
@@ -123,22 +122,25 @@ namespace CityInfo.API.Controllers
                 return BadRequest(ModelState);
             }
 
-            var city = CitiesDataStore.Current.Cities.FirstOrDefault(c => c.Id == cityId);
-
-            if (city == null)
+            if (!_repository.CityExists(cityId))
             {
                 return NotFound();
             }
 
-            var pointOfInterest = city.PointsOfInterest.FirstOrDefault(p => p.Id == id);
+            var pointOfInterest = _repository.GetPointOfInterest(cityId, id);
             if (pointOfInterest == null)
             {
                 return BadRequest(new { ErrorMessage = "This point of interest does not exist." });
             }
 
-            pointOfInterest.Name = pointOfInterestForUpdate.Name;
-            pointOfInterest.Description = pointOfInterestForUpdate.Description;
+            Mapper.Map(pointOfInterestForUpdate, pointOfInterest);
 
+            if (!_repository.Save())
+            {
+                _logger.LogCritical($"Error when updating point of Interest for CityID {cityId}, PointOfInterest {id},{pointOfInterestForUpdate.Name}");
+                return StatusCode(500, "A problem happen when updating the point of interest. Please try again");
+            }
+            
             return NoContent();
         }
 
