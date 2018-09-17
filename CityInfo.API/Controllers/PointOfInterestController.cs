@@ -191,8 +191,8 @@ namespace CityInfo.API.Controllers
 
             if (!_repository.Save())
             {
-                _logger.LogCritical($"Error when updating point of Interest for CityID {cityId}, PointOfInterest {id},{pointOfInterestToPatch.Name}");
-                return StatusCode(500, "A problem happen when updating the point of interest. Please try again");
+                _logger.LogCritical($"Error when patch updating point of Interest for CityID {cityId}, PointOfInterest {id},{pointOfInterestToPatch.Name}");
+                return StatusCode(500, "A problem happen when patch updating the point of interest. Please try again");
             }
             
             return NoContent();
@@ -205,21 +205,25 @@ namespace CityInfo.API.Controllers
 
         [HttpDelete("{cityId}/pointofinterest/{id}")]
         public IActionResult DeletePointOfInterest(int cityId, int id)
-        {
-            var city = CitiesDataStore.Current.Cities.FirstOrDefault(c => c.Id == cityId);
-
-            if (city == null)
+        {            
+            if (!_repository.CityExists(cityId))
             {
                 return NotFound();
             }
 
-            var pointOfInterest = city.PointsOfInterest.FirstOrDefault(p => p.Id == id);
+            var pointOfInterest = _repository.GetPointOfInterest(cityId,id);
             if (pointOfInterest == null)
             {
                 return BadRequest(new { ErrorMessage = "This point of interest does not exist." });
             }
 
-            city.PointsOfInterest.Remove(pointOfInterest);
+            _repository.RemovePointOfInterest(pointOfInterest);
+
+            if (!_repository.Save())
+            {
+                _logger.LogCritical($"Error when deleting point of Interest for CityID {cityId}, PointOfInterest {id},{pointOfInterest.Name}");
+                return StatusCode(500, "A problem happen when deleting the point of interest. Please try again");
+            }
 
             _mailService.Send($"Point of Sale Deleted", $"Point of Sale Deleted in {cityId}");
 
