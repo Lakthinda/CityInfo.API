@@ -158,24 +158,24 @@ namespace CityInfo.API.Controllers
                 return BadRequest(ModelState);
             }
 
-            var city = CitiesDataStore.Current.Cities.FirstOrDefault(c => c.Id == cityId);
-
-            if (city == null)
+            if (!_repository.CityExists(cityId))
             {
                 return NotFound();
             }
 
-            var pointOfInterest = city.PointsOfInterest.FirstOrDefault(p => p.Id == id);
+            var pointOfInterest = _repository.GetPointOfInterest(cityId, id);
             if (pointOfInterest == null)
             {
                 return BadRequest(new { ErrorMessage = "This point of interest does not exist." });
             }
 
-            var pointOfInterestToPatch = new PointOfInterestForUpdateDto()
-            {
-                Name = pointOfInterest.Name,
-                Description = pointOfInterest.Description
-            };
+            // var pointOfInterestToPatch = new PointOfInterestForUpdateDto()
+            // {
+            //     Name = pointOfInterest.Name,
+            //     Description = pointOfInterest.Description
+            // };
+
+            var pointOfInterestToPatch = Mapper.Map<PointOfInterestForUpdateDto>(pointOfInterest);
 
             // Apply patch
             patchDoc.ApplyTo(pointOfInterestToPatch, ModelState);
@@ -187,11 +187,20 @@ namespace CityInfo.API.Controllers
                 return BadRequest(ModelState);
             }
 
+            Mapper.Map(pointOfInterestToPatch, pointOfInterest);
 
-            pointOfInterest.Name = pointOfInterestToPatch.Name;
-            pointOfInterest.Description = pointOfInterestToPatch.Description;
+            if (!_repository.Save())
+            {
+                _logger.LogCritical($"Error when updating point of Interest for CityID {cityId}, PointOfInterest {id},{pointOfInterestToPatch.Name}");
+                return StatusCode(500, "A problem happen when updating the point of interest. Please try again");
+            }
             
             return NoContent();
+
+            // pointOfInterest.Name = pointOfInterestToPatch.Name;
+            // pointOfInterest.Description = pointOfInterestToPatch.Description;
+            
+            // return NoContent();
         }
 
         [HttpDelete("{cityId}/pointofinterest/{id}")]
